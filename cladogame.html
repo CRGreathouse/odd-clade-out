@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Odd Clade Out</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="favicon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="cladogame.css" rel="stylesheet">
+</head>
+<body>
+
+<div id="streak-overlay">
+  <div class="streak-message">🔥 On fire!</div>
+</div>
+<div id="newcreature-overlay">
+  <div class="newcreature-inner">
+    <div class="newcreature-badge">New creature unlocked!</div>
+    <div class="newcreature-card">
+      <div class="newcreature-image" id="newcreature-image"></div>
+      <div class="newcreature-common" id="newcreature-common"></div>
+      <div class="newcreature-sci" id="newcreature-sci"></div>
+      <div class="card-divider"></div>
+      <div class="newcreature-fact" id="newcreature-fact"></div>
+    </div>
+    <div class="newcreature-hint">Click anywhere to continue</div>
+  </div>
+</div>
+
+<header>
+  <h1 class="game-title">Odd <span>Clade</span> Out</h1>
+  <p class="game-subtitle">A phylogenetics quiz</p>
+</header>
+
+<div class="score-bar">
+  <div class="score-block">
+    <span class="score-label">Streak</span>
+    <span class="score-value" id="streak-display">0</span>
+  </div>
+  <div class="score-divider"></div>
+  <div class="score-block">
+    <span class="score-label">Correct</span>
+    <span class="score-value" id="correct-display">0</span>
+  </div>
+  <div class="score-divider"></div>
+  <div class="score-block">
+    <span class="score-label">Played</span>
+    <span class="score-value" id="played-display">0</span>
+  </div>
+  <div class="score-divider"></div>
+  <div class="score-block">
+    <span class="score-label">Species</span>
+    <span class="score-value" id="species-display">0</span>
+  </div>
+</div>
+
+<p class="prompt">
+  Which organism is the <strong>odd one out</strong> — least related to the other two?
+</p>
+
+<div class="cards-grid" id="cards-grid"></div>
+<div class="result-panel" id="result-panel"></div>
+<button class="next-btn" id="next-btn" onclick="handleNextClick()">Next round →</button>
+
+<script src="phylogeny.js"></script>
+<script src="cladogame-logic.js"></script>
+<script src="cladogame-ui.js"></script>
+</body>
+</html>
