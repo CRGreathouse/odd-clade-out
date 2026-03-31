@@ -473,15 +473,19 @@ function buildExplanation(answer, isCorrect) {
     ? `${(pairAge / 1000).toFixed(1)} billion`
     : `${Math.round(pairAge)} million`;
   const intro = isCorrect ? 'Correct!' : `The odd one out was <strong>${nodeMap[odd].commonName}</strong>.`;
+  const traitOf = node => node.trait ? ` — ${node.trait}` : '';
+  const pairSep = clade.trait ? ` —` : `,`;
   let explanation = `${intro} <strong>${nodeMap[pairA].commonName}</strong> and <strong>${nodeMap[pairB].commonName}</strong> `
-    + `are both ${formatClade(clade)}, `
+    + `are both ${formatClade(clade)}${traitOf(clade)}${pairSep} `
     + `having diverged ~${age} years ago — making <strong>${nodeMap[odd].commonName}</strong> the more distant relative.`;
 
   const excId = exclusiveClade(odd, pairNode);
   if (excId === odd) {
-    explanation += ` All three belong to ${formatClade(nodeMap[nodeMap[odd].parent])}.`;
+    const parent = nodeMap[nodeMap[odd].parent];
+    explanation += ` All three belong to ${formatClade(parent)}${traitOf(parent)}.`;
   } else {
-    explanation += ` <strong>${nodeMap[odd].commonName}</strong> belongs to ${formatClade(nodeMap[excId])}.`;
+    const excNode = nodeMap[excId];
+    explanation += ` <strong>${nodeMap[odd].commonName}</strong> belongs to ${formatClade(excNode)}${traitOf(excNode)}.`;
   }
 
   return explanation;
