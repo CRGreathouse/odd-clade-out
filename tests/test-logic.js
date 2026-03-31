@@ -478,6 +478,34 @@ test('doPrestige resets session counters', () => {
   assert.equal(s.played,  0);
 });
 
+// ── getLink() ─────────────────────────────────────────────────────────────────
+console.log('\ngetLink()');
+
+test('link key takes priority over wiki and sci', () => {
+  const node = { sci: 'Foo bar', commonName: 'Foo', link: 'https://example.com/foo', wiki: 'Foo_bar' };
+  const html = L.getLink(node);
+  assert.ok(html.includes('href="https://example.com/foo"'), 'should use link URL');
+  assert.ok(html.includes('>Foo<'), 'should use commonName as text');
+});
+
+test('link key without wiki uses link URL', () => {
+  const node = { sci: 'Foo bar', commonName: 'Foo', link: 'https://example.com/foo' };
+  const html = L.getLink(node);
+  assert.ok(html.includes('href="https://example.com/foo"'), 'should use link URL');
+});
+
+test('wiki key without link gives Wikipedia URL from wiki slug', () => {
+  const node = { sci: 'Foo bar', commonName: 'Foo', wiki: 'Custom_slug' };
+  const html = L.getLink(node);
+  assert.ok(html.includes('href="https://en.wikipedia.org/wiki/Custom_slug"'), 'should use wiki slug');
+});
+
+test('neither link nor wiki falls back to sci for Wikipedia URL', () => {
+  const node = { sci: 'Foo bar', commonName: 'Foo' };
+  const html = L.getLink(node);
+  assert.ok(html.includes('href="https://en.wikipedia.org/wiki/Foo_bar"'), 'should use sci with spaces → underscores');
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

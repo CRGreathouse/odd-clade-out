@@ -68,6 +68,13 @@ if (roots.length !== 1) {
   }
 }
 
+// ── Link field checks ─────────────────────────────────────────────────────────
+for (const n of nodes) {
+  if (n.link && n.wiki) {
+    warn(`Node "${n.id}" has both "link" and "wiki" — "wiki" will be ignored`);
+  }
+}
+
 // ── Image checks ──────────────────────────────────────────────────────────────
 const imagesDir    = path.join(__dirname, '..', 'images');
 const imageFiles   = new Set(

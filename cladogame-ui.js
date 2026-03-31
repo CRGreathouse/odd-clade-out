@@ -38,7 +38,7 @@ function buildCardHTML(org) {
     <div class="card-common">${org.commonName}</div>
     <div class="card-sci">${org.sci}</div>
     ${org.funFact ? `<div class="card-divider"></div><div class="card-fact">${org.funFact}</div>` : ''}
-    <div class="card-overlay"><div class="x-mark"></div></div>`;
+    <div class="card-overlay"><div class="x-mark"></div><div class="check-mark"></div></div>`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -163,14 +163,11 @@ function handleGuess(guessedId) {
   resultPanel.insertAdjacentHTML('beforeend',
     '<div class="cladogram">' + buildCladogram(currentAnswer) + '</div>');
 
-  const wikiUrl = slug => 'https://en.wikipedia.org/wiki/' + slug.replace(/ /g, '_');
   const learnOrgs = [currentAnswer.odd, currentAnswer.pairA, currentAnswer.pairB]
     .map(id => nodeMap[id]);
   resultPanel.insertAdjacentHTML('beforeend',
     '<p class="learn-more">Learn more: ' +
-    learnOrgs.map(o =>
-      `<a href="${wikiUrl(o.wiki || o.sci)}" target="_blank" rel="noopener noreferrer">${o.commonName}</a>`
-    ).join(' · ') +
+    learnOrgs.map(o => getLink(o)).join(' · ') +
     '</p>');
 
   resultPanel.classList.add('visible');

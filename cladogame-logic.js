@@ -108,57 +108,61 @@ function sampleThree(arr) {
 let forcedCreatureId = null;
 function setForcedCreature(id) { forcedCreatureId = id; }
 
+// Combined weight for a candidate triple. Three factors multiplied together:
+//   histWeight    — unseen=1.0, all-correct=0.2, all-wrong=2.0
+//   hardWeight    — peaks at targetH, falls off linearly on either side (min 0.05)
+//   creatureWeight— rewards unfamiliar/confused creatures; range [0.3, 2.0]
+function tripleWeight(a, b, c, h, targetH, history, creatureScores) {
+  const rec = history[tripleKey(a.id, b.id, c.id)];
+  const histWeight = rec && rec.played > 0
+    ? 0.2 + (1 - rec.correct / rec.played) * 1.8
+    : 1.0;
+  const hardWeight = Math.max(0.05, 1 - 2 * Math.abs(h - targetH));
+  const avgFam = [a, b, c].reduce((s, org) => s + (creatureScores[org.id] || 0), 0) / 3;
+  const creatureWeight = Math.max(0.3, Math.min(2.0, 1.0 - avgFam * 0.25));
+  return histWeight * hardWeight * creatureWeight;
+}
+
+// Weighted random pick from pool entries that each carry a .weight field.
+function weightedPickFrom(pool) {
+  const total = pool.reduce((s, p) => s + p.weight, 0);
+  let r = Math.random() * total;
+  for (const p of pool) {
+    r -= p.weight;
+    if (r <= 0) return p;
+  }
+  return pool[pool.length - 1];
+}
+
 // Returns a valid triple of leaf node objects, targeted to the current difficulty.
-// Weights candidates by hardness proximity and history (prefers unseen and
-// previously-missed triples; down-weights already-mastered ones).
+// Weights candidates by hardness proximity, history, and creature familiarity.
 // If forcedCreatureId is set, the returned triple is guaranteed to include it.
 function pickTriple() {
   const targetH = targetHardness();
   const history = loadHistory();
   const creatureScores = loadCreatureScores();
-  const pool = [];
 
   const available = leavesAvailable();
   const forced = forcedCreatureId ? nodeMap[forcedCreatureId] : null;
   forcedCreatureId = null; // consume immediately so it only affects one round
   const others = forced ? available.filter(l => l.id !== forced.id) : null;
+  const fallback = () => forced ? [forced, ...sampleTwo(others)] : available.slice(0, 3);
 
+  const pool = [];
   for (let attempt = 0; attempt < 120; attempt++) {
     const [a, b, c] = forced ? [forced, ...sampleTwo(others)] : sampleThree(available);
     const h = tripleHardness(a.id, b.id, c.id);
-    if (h < 0) continue; // ambiguous
-
-    // History weight: unseen = 1.0, all correct = 0.2, all wrong = 2.0
-    const rec = history[tripleKey(a.id, b.id, c.id)];
-    const histWeight = rec && rec.played > 0
-      ? 0.2 + (1 - rec.correct / rec.played) * 1.8
-      : 1.0;
-
-    // Hardness weight: peaks at targetH, falls off on either side
-    const hardWeight = Math.max(0.05, 1 - 2 * Math.abs(h - targetH));
-
-    // Creature weight: triples containing unfamiliar/confused creatures get
-    // higher weight; triples of already-mastered creatures get lower weight.
-    // Range [0.3, 2.0], centred at 1.0 for unseen creatures (score 0).
-    const avgFam = [a, b, c].reduce((s, org) => s + (creatureScores[org.id] || 0), 0) / 3;
-    const creatureWeight = Math.max(0.3, Math.min(2.0, 1.0 - avgFam * 0.25));
-
-    pool.push({ triple: [a, b, c], hardness: h, weight: histWeight * hardWeight * creatureWeight });
+    if (h < 0) continue; // ambiguous triple — skip
+    pool.push({ triple: [a, b, c], hardness: h,
+      weight: tripleWeight(a, b, c, h, targetH, history, creatureScores) });
     if (pool.length >= 40) break;
   }
 
-  if (!pool.length) { currentHardness = 0; return forced ? [forced, ...sampleTwo(others)] : available.slice(0, 3); }
+  if (!pool.length) { currentHardness = 0; return fallback(); }
 
-  // Weighted random selection
-  const total = pool.reduce((s, p) => s + p.weight, 0);
-  let r = Math.random() * total;
-  for (const p of pool) {
-    r -= p.weight;
-    if (r <= 0) { currentHardness = p.hardness; return p.triple; }
-  }
-  const last = pool[pool.length - 1];
-  currentHardness = last.hardness;
-  return last.triple;
+  const picked = weightedPickFrom(pool);
+  currentHardness = picked.hardness;
+  return picked.triple;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -463,20 +467,27 @@ function recordCorrectAndCheckStreak(now) {
   return false;
 }
 
+function getLink(node, cssClass) {
+  const url = node.link
+    ? node.link
+    : 'https://en.wikipedia.org/wiki/' + (node.wiki || node.sci).replace(/ /g, '_');
+  const name = node.commonName || node.label;
+  const cls = cssClass ? ` class="${cssClass}"` : '';
+  return `<a${cls} href="${url}" target="_blank" rel="noreferrer">${name}</a>`;
+}
+
 // ── Result explanation (HTML string, no DOM writes) ───────────────────────────
 function buildExplanation(answer, isCorrect) {
   const { odd, pairA, pairB, pairNode, pairAge } = answer;
   const clade = nodeMap[pairNode];
-  const cladeUrl = node => 'https://en.wikipedia.org/wiki/' + (node.wiki || node.sci).replace(/ /g, '_');
-  const formatClade = node => `<a class="clade-name" href="${cladeUrl(node)}" target="_blank" rel="noopener noreferrer">${node.label}</a> (<i>${node.sci}</i>)`;
+  const formatClade = node => `${getLink(node, 'clade-name')} (<i>${node.sci}</i>)`;
   const age = pairAge >= 1000
     ? `${(pairAge / 1000).toFixed(1)} billion`
     : `${Math.round(pairAge)} million`;
   const intro = isCorrect ? 'Correct!' : `The odd one out was <strong>${nodeMap[odd].commonName}</strong>.`;
-  const traitOf = node => node.trait ? ` — ${node.trait}` : '';
-  const pairSep = clade.trait ? ` —` : `,`;
+  const traitOf = node => node.trait ? `, ${node.trait}` : '';
   let explanation = `${intro} <strong>${nodeMap[pairA].commonName}</strong> and <strong>${nodeMap[pairB].commonName}</strong> `
-    + `are both ${formatClade(clade)}${traitOf(clade)}${pairSep} `
+    + `are both ${formatClade(clade)}${traitOf(clade)}, `
     + `having diverged ~${age} years ago — making <strong>${nodeMap[odd].commonName}</strong> the more distant relative.`;
 
   const excId = exclusiveClade(odd, pairNode);
@@ -495,7 +506,7 @@ function buildExplanation(answer, isCorrect) {
 if (typeof module !== 'undefined') {
   module.exports = {
     initTree, ancestors, lca, lcaAge, tripleHardness, exclusiveClade, oddOneOut,
-    targetHardness, buildExplanation,
+    targetHardness, buildExplanation, getLink,
     recordCorrectAndCheckStreak,
     tripleKey, loadHistory, saveResult, loadCreatureScores, updateCreatureScores,
     resolveImage, pickTriple,

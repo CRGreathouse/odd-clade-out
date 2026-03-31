@@ -6,7 +6,7 @@ This is a phylogenetics quiz game where you identify which of three organisms is
 
 ## How to Play
 
-Open `cladogame.html` directly in a browser. (For a single-file offline version, run `python3 build.py` first to generate `cladogame-bundle.html`, then open that file.)
+Open `index.html` directly in a browser. (For a single-file offline version, run `python3 build.py` first to generate `cladogame-bundle.html`, then open that file.)
 
 ### Gameplay
 
