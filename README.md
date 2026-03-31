@@ -57,7 +57,7 @@ Image names are lowercase and hyphen-separated (e.g. `bald-eagle.png`, `giant-ke
 
 ## Running Tests
 
-`./pre-commit.sh` runs all tests in addition to `node validate.js`. You can also run them individually:
+`./pre-commit.sh` runs all tests in addition to `node checks/validate.js`. You can also run them individually:
 
 ```
 node tests/test-logic.js

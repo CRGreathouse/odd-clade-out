@@ -15,8 +15,8 @@ if [ "$count_ds" -gt 0 ]; then
     echo "Found and deleted $count_ds .DS_Store files."
 fi
 
-echo "==> validate.js"
-node validate.js
+echo "==> checks/validate.js"
+node checks/validate.js
 
 echo ""
 echo "==> tests/test-tree.js"

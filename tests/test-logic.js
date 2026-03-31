@@ -383,6 +383,101 @@ test('unlocking all tier-2 creatures raises threshold to a tier-3 interval', () 
     `expected threshold ${threshold} > xp ${xp}`);
 });
 
+// ── Prestige ──────────────────────────────────────────────────────────────────
+console.log('\nPrestige');
+
+test('loadPrestige returns 0 when nothing stored', () => {
+  reset();
+  assert.equal(L.loadPrestige(), 0);
+});
+
+test('savePrestige / loadPrestige round-trip', () => {
+  reset();
+  L.savePrestige(3);
+  assert.equal(L.loadPrestige(), 3);
+});
+
+test('loadAlltime returns zeros when nothing stored', () => {
+  reset();
+  const a = L.loadAlltime();
+  assert.equal(a.played,  0);
+  assert.equal(a.correct, 0);
+});
+
+test('saveAlltime / loadAlltime round-trip', () => {
+  reset();
+  L.saveAlltime({ played: 50, correct: 35 });
+  const a = L.loadAlltime();
+  assert.equal(a.played,  50);
+  assert.equal(a.correct, 35);
+});
+
+test('prestigeTitle returns null for level 0', () => {
+  assert.equal(L.prestigeTitle(0), null);
+});
+
+test('prestigeTitle returns first title for level 1', () => {
+  assert.equal(L.prestigeTitle(1), L.PRESTIGE_TITLES[0]);
+});
+
+test('prestigeTitle returns last title for level above max', () => {
+  assert.equal(L.prestigeTitle(999), L.PRESTIGE_TITLES[L.PRESTIGE_TITLES.length - 1]);
+});
+
+test('allCreaturesUnlocked returns false when not all unlocked', () => {
+  reset();
+  assert.equal(L.allCreaturesUnlocked(), false);
+});
+
+test('doPrestige increments prestige level', () => {
+  reset();
+  L.doPrestige();
+  assert.equal(L.loadPrestige(), 1);
+});
+
+test('doPrestige resets XP to 0', () => {
+  reset();
+  L.saveXp(100);
+  L.doPrestige();
+  assert.equal(L.loadXp(), 0);
+});
+
+test('doPrestige clears unlocked creatures', () => {
+  reset();
+  L.saveUnlocked(['human', 'chimp']);
+  L.doPrestige();
+  assert.deepEqual(L.loadUnlocked(), []);
+});
+
+test('doPrestige clears history', () => {
+  reset();
+  L.saveResult('human', 'chimp', 'ecoli', true);
+  L.doPrestige();
+  assert.deepEqual(L.loadHistory(), {});
+});
+
+test('doPrestige folds history into alltime before clearing', () => {
+  reset();
+  L.saveAlltime({ played: 10, correct: 7 });
+  L.saveResult('human', 'chimp', 'ecoli', true);
+  L.saveResult('human', 'chimp', 'ecoli', false);
+  // history: 2 played, 1 correct
+  L.doPrestige();
+  const a = L.loadAlltime();
+  assert.equal(a.played,  12); // 10 + 2
+  assert.equal(a.correct,  8); // 7 + 1
+});
+
+test('doPrestige resets session counters', () => {
+  reset();
+  L._set({ streak: 5, correct: 10, played: 15 });
+  L.doPrestige();
+  const s = L._get();
+  assert.equal(s.streak,  0);
+  assert.equal(s.correct, 0);
+  assert.equal(s.played,  0);
+});
+
 // ── Summary ───────────────────────────────────────────────────────────────────
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);

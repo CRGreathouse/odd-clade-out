@@ -12,7 +12,7 @@
 const fs   = require('fs');
 const path = require('path');
 
-const phylogeny = require('./phylogeny.js');
+const phylogeny = require('../phylogeny.js');
 const nodes     = phylogeny.nodes;
 
 let errors   = 0;
@@ -69,7 +69,7 @@ if (roots.length !== 1) {
 }
 
 // ── Image checks ──────────────────────────────────────────────────────────────
-const imagesDir    = path.join(__dirname, 'images');
+const imagesDir    = path.join(__dirname, '..', 'images');
 const imageFiles   = new Set(
   fs.readdirSync(imagesDir).filter(f => /\.(png|jpg|jpeg|gif|webp|svg)$/i.test(f))
 );
@@ -97,53 +97,82 @@ for (const f of imageFiles) {
   if (!referenced.has(f)) warn(`"images/${f}" is not referenced by any leaf node`);
 }
 
-// ── Triple / polytomy analysis ────────────────────────────────────────────────
-// Enumerate all C(n,3) triples of leaf nodes and classify each as playable
-// (unique odd one out) or a polytomy (all three pairwise LCAs are the same
-// node — no cladistic answer exists).  Expected playable count with no
-// polytomies: C(n,3) = n*(n-1)*(n-2)/6.  Each polytomy reduces this by 1.
+// ── Tree structure / polytomy analysis ───────────────────────────────────────
+// A triple (a,b,c) is a polytomy iff all three pairwise LCAs are the same
+// node — which can only happen when that node has ≥ 3 children and the three
+// leaves come from at least 3 different subtrees.  A fully binary tree
+// therefore guarantees zero polytomies.
+//
+// Algorithm:
+//   1. Build children lists for all nodes  O(n)
+//   2. Classify each internal node by child count  O(n)
+//      - 1 child  → redundant (warn, but harmless)
+//      - 2 children → binary (ok)
+//      - ≥ 3 children → polytomy node (report)
+//   3. If no polytomy nodes → done (no triples need testing)
+//   4. Otherwise count affected triples analytically and show examples.
+//
+// Counting formula for polytomy triples under a node with child leaf-counts
+// L1..Lk:  e3 = (S1³ − 3·S1·S2 + 2·S3) / 6
+// where S1=Σ Li, S2=Σ Li², S3=Σ Li³.  Runs in O(k) per polytomy node.
 
-function ancestors(id) {
-  const path = [];
-  for (let cur = id; cur !== null; cur = nodeMap[cur].parent) path.push(cur);
-  return path;
+const children = {};
+for (const n of nodes) children[n.id] = [];
+for (const n of nodes) {
+  if (n.parent !== null) children[n.parent].push(n.id);
 }
-function lcaFn(a, b) {
-  const setA = new Set(ancestors(a));
-  for (const n of ancestors(b)) if (setA.has(n)) return n;
+
+function leafDescendantsOf(id) {
+  if (nodeMap[id].isLeaf) return [id];
+  return children[id].flatMap(c => leafDescendantsOf(c));
 }
 
 const leaves = nodes.filter(n => n.isLeaf);
+const redundantNodes = [];
+const polytomyNodes  = [];
+for (const n of nodes) {
+  if (n.isLeaf) continue;
+  const k = children[n.id].length;
+  if (k === 1) redundantNodes.push(n);
+  else if (k >= 3) polytomyNodes.push(n);
+}
+
+if (redundantNodes.length > 0) {
+  warn(`${redundantNodes.length} node(s) have only 1 child (redundant but harmless): ${redundantNodes.map(n => `"${n.id}"`).join(', ')}`);
+}
+
 {
   const n = leaves.length;
-  const total = n * (n - 1) * (n - 2) / 6;
-  const polytomies = [];
+  const totalTriples = n * (n - 1) * (n - 2) / 6;
 
-  for (let i = 0; i < n; i++)
-    for (let j = i + 1; j < n; j++)
-      for (let k = j + 1; k < n; k++) {
-        const a = leaves[i].id, b = leaves[j].id, c = leaves[k].id;
-        const lab = lcaFn(a, b), lac = lcaFn(a, c), lbc = lcaFn(b, c);
-        if (lab === lac && lab === lbc)
-          polytomies.push({ ids: [a, b, c], node: lab });
+  if (polytomyNodes.length === 0) {
+    console.log(`\nTree is fully bifurcating — all C(${n},3) = ${totalTriples} triples are playable.`);
+  } else {
+    let polytomyCount = 0;
+    const examples = [];
+
+    for (const polyNode of polytomyNodes) {
+      const childLeaves = children[polyNode.id].map(c => leafDescendantsOf(c));
+      const lc          = childLeaves.map(l => l.length);
+      const s1 = lc.reduce((a, b) => a + b,         0);
+      const s2 = lc.reduce((a, b) => a + b * b,     0);
+      const s3 = lc.reduce((a, b) => a + b * b * b, 0);
+      polytomyCount += (s1 ** 3 - 3 * s1 * s2 + 2 * s3) / 6;
+
+      if (examples.length < 5) {
+        const triple = childLeaves.slice(0, 3).map(cl => cl[0]);
+        examples.push({ ids: triple, node: polyNode.id });
       }
-
-  // Note: This takes time roughly n^3/1552 ms, so very roughly:
-  // 25 leaves: 10 ms
-  // 54 leaves: 100 ms
-  // 116 leaves: 1 s
-  // 250 leaves: 10 s
-  // If phylogeny.js grows too large, we might need to do this less often.
-  const playable = total - polytomies.length;
-  console.log(`\nTriple analysis: ${n} leaves → C(${n},3) = ${total} triples`);
-  console.log(`  Playable (unambiguous): ${playable}`);
-  if (polytomies.length > 0) {
-    warn(`${polytomies.length} polytomy triple(s) reduce playable count to ${playable}`);
-    for (const p of polytomies.slice(0, 5)) {
-      const names = p.ids.map(id => nodeMap[id].commonName);
-      warn(`  Polytomy: ${names.join(', ')} — all branch from "${p.node}"`);
     }
-    if (polytomies.length > 5) warn(`  … and ${polytomies.length - 5} more`);
+
+    const playable = totalTriples - polytomyCount;
+    console.log(`\nTriple analysis: ${n} leaves → C(${n},3) = ${totalTriples} triples`);
+    warn(`${polytomyNodes.length} polytomy node(s): ${polytomyNodes.map(p => `"${p.id}"`).join(', ')}`);
+    warn(`${polytomyCount} polytomy triple(s) — playable: ${playable}`);
+    for (const p of examples) {
+      const names = p.ids.map(id => nodeMap[id].commonName);
+      warn(`  Example polytomy: ${names.join(', ')} — all branch from "${p.node}"`);
+    }
   }
 }
 

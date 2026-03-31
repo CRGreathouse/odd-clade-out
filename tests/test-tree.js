@@ -203,22 +203,32 @@ test('pair members are the two non-odd organisms', () => {
 });
 
 test('returns null for a polytomy (all three pairwise LCAs identical)', () => {
-  // Find a polytomy in the actual tree, or confirm none exist.
-  const ids = leaves.map(l => l.id);
-  let found = null;
-  outer: for (let i = 0; i < ids.length && !found; i++)
-    for (let j = i+1; j < ids.length && !found; j++)
-      for (let k = j+1; k < ids.length && !found; k++) {
-        const [a, b, c] = [ids[i], ids[j], ids[k]];
-        if (lca(a,b) === lca(a,c) && lca(a,b) === lca(b,c)) found = [a, b, c];
-      }
-  if (found) {
-    assert.equal(oddOneOut(...found), null, `expected null for polytomy ${found}`);
+  // Use structural search O(n) instead of triple enumeration O(n^3):
+  // a polytomy triple requires a node with ≥ 3 children.
+  const childrenMap = {};
+  for (const n of phylogeny.nodes) childrenMap[n.id] = [];
+  for (const n of phylogeny.nodes) {
+    if (n.parent !== null) childrenMap[n.parent].push(n.id);
+  }
+
+  function firstLeafUnder(id) {
+    if (leafIds.has(id)) return id;
+    return firstLeafUnder(childrenMap[id][0]);
+  }
+
+  const polytomyNode = phylogeny.nodes.find(
+    n => !n.isLeaf && childrenMap[n.id].length >= 3
+  );
+
+  if (polytomyNode) {
+    // One leaf from each of the first 3 children → guaranteed polytomy triple.
+    const [a, b, c] = childrenMap[polytomyNode.id].slice(0, 3).map(firstLeafUnder);
+    assert.equal(oddOneOut(a, b, c), null,
+      `expected null for polytomy triple [${a}, ${b}, ${c}] under "${polytomyNode.id}"`);
   } else {
-    // No polytomies in this tree — verify the function still returns non-null
-    // for a known unambiguous triple as a sanity check.
+    // Fully binary tree — no polytomies exist.
     assert.notEqual(oddOneOut('human', 'chimp', 'ecoli'), null);
-    console.log('    (no polytomies in current tree — null-return path untriggered)');
+    console.log('    (tree is fully binary — no polytomies exist; null-return path untriggered)');
   }
 });
 

@@ -11,6 +11,59 @@
 </head>
 <body>
 
+<div id="stats-overlay">
+  <div class="stats-panel">
+    <div class="stats-panel-header">
+      <div class="stats-panel-title-row">
+        <h2 class="stats-panel-title">Statistics</h2>
+        <span id="stats-prestige-level" class="stats-prestige-level"></span>
+      </div>
+      <button class="stats-close-btn" onclick="closeStats()">×</button>
+    </div>
+    <div class="stats-summary">
+      <div class="stats-num">
+        <span class="stats-num-value" id="stats-accuracy-val">—</span>
+        <span class="stats-num-label">Accuracy</span>
+      </div>
+      <div class="stats-num-divider"></div>
+      <div class="stats-num">
+        <span class="stats-num-value" id="stats-played-val">—</span>
+        <span class="stats-num-label">Rounds</span>
+      </div>
+      <div class="stats-num-divider"></div>
+      <div class="stats-num">
+        <span class="stats-num-value" id="stats-streak-val">—</span>
+        <span class="stats-num-label">Best streak</span>
+      </div>
+    </div>
+    <div id="stats-no-data" class="stats-empty">Play some rounds to see your stats.</div>
+    <div id="stats-data">
+      <div class="stats-section">
+        <div class="stats-section-label">Accuracy spotting the odd one out, by clade</div>
+        <div id="stats-clades"></div>
+      </div>
+      <div class="stats-section" id="stats-hardest-wrap">
+        <div class="stats-section-label">Hardest triple you've solved</div>
+        <div id="stats-hardest"></div>
+      </div>
+    </div>
+    <div id="stats-prestige-section" class="stats-section">
+      <div id="stats-prestige-ready">
+        <div class="stats-section-label">New run</div>
+        <p class="stats-prestige-desc">You've unlocked every creature. You can prestige — your best streak and lifetime stats carry over, and you'll re-earn creatures on a fresh start.</p>
+        <button class="stats-prestige-btn" onclick="showPrestigeConfirm()">Prestige →</button>
+      </div>
+      <div id="stats-prestige-confirm">
+        <p class="stats-prestige-desc">Reset creatures and round history? Your best streak and lifetime totals are kept.</p>
+        <div class="stats-prestige-confirm-btns">
+          <button class="stats-prestige-confirm-go" onclick="confirmPrestige()">Confirm prestige</button>
+          <button class="stats-prestige-confirm-cancel" onclick="hidePrestigeConfirm()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="streak-overlay">
   <div class="streak-message">🔥 On fire!</div>
 </div>
@@ -53,7 +106,11 @@
     <span class="score-label">Species</span>
     <span class="score-value" id="species-display">0</span>
   </div>
+  <div class="score-divider"></div>
+  <button class="score-stats-btn" onclick="openStats()">Stats</button>
 </div>
+
+<div id="prestige-badge" class="prestige-badge"></div>
 
 <p class="prompt">
   Which organism is the <strong>odd one out</strong> — least related to the other two?

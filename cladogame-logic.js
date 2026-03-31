@@ -172,10 +172,13 @@ let roundResolved = false;
 // ══════════════════════════════════════════════════════════════════════════════
 // Persistence (localStorage)
 // ══════════════════════════════════════════════════════════════════════════════
-const HISTORY_KEY   = 'cladogame_v1_history';
-const CREATURE_KEY  = 'cladogame_v1_creatures';
-const XP_KEY      = 'cladogame_v1_xp';
-const UNLOCK_KEY  = 'cladogame_v1_unlocked';
+const HISTORY_KEY        = 'cladogame_v1_history';
+const CREATURE_KEY       = 'cladogame_v1_creatures';
+const XP_KEY             = 'cladogame_v1_xp';
+const UNLOCK_KEY         = 'cladogame_v1_unlocked';
+const LONGEST_STREAK_KEY = 'cladogame_v1_longest_streak';
+const PRESTIGE_KEY       = 'cladogame_v1_prestige';
+const ALLTIME_KEY        = 'cladogame_v1_alltime';
 
 function tripleKey(a, b, c) { return [a, b, c].sort().join(','); }
 
@@ -229,6 +232,71 @@ function loadXp() {
 }
 function saveXp(n) {
   try { localStorage.setItem(XP_KEY, String(Math.max(0, n))); } catch {}
+}
+
+function loadLongestStreak() {
+  return Math.max(0, parseInt(localStorage.getItem(LONGEST_STREAK_KEY) || '0', 10) || 0);
+}
+function saveLongestStreak(n) {
+  try { localStorage.setItem(LONGEST_STREAK_KEY, String(n)); } catch {}
+}
+
+function loadPrestige() {
+  return Math.max(0, parseInt(localStorage.getItem(PRESTIGE_KEY) || '0', 10) || 0);
+}
+function savePrestige(n) {
+  try { localStorage.setItem(PRESTIGE_KEY, String(n)); } catch {}
+}
+
+function loadAlltime() {
+  try {
+    const d = JSON.parse(localStorage.getItem(ALLTIME_KEY) || '{}');
+    return { played: d.played || 0, correct: d.correct || 0 };
+  } catch { return { played: 0, correct: 0 }; }
+}
+function saveAlltime(d) {
+  try { localStorage.setItem(ALLTIME_KEY, JSON.stringify(d)); } catch {}
+}
+
+const PRESTIGE_TITLES = [
+  'Naturalist', 'Biologist', 'Ecologist',
+  'Taxonomist', 'Phylogeneticist', 'Systematist',
+];
+function prestigeTitle(level) {
+  if (level === 0) return null;
+  return PRESTIGE_TITLES[Math.min(level - 1, PRESTIGE_TITLES.length - 1)];
+}
+
+// True when every creature in the tree (all tiers) is available to the player.
+function allCreaturesUnlocked() {
+  return leavesAvailable().length === leaves.length;
+}
+
+// Resets per-run data (XP, unlocks, history, creature scores, session counters)
+// while accumulating totals into the all-time bucket and incrementing prestige.
+// Returns the new prestige level.
+function doPrestige() {
+  // Fold current run's history into all-time before clearing
+  const alltime = loadAlltime();
+  for (const rec of Object.values(loadHistory())) {
+    alltime.played  += rec.played;
+    alltime.correct += rec.correct;
+  }
+  saveAlltime(alltime);
+
+  // Clear per-run data
+  saveToStorage(HISTORY_KEY,  {});
+  saveToStorage(CREATURE_KEY, {});
+  saveXp(0);
+  saveUnlocked([]);
+
+  // Reset in-session counters
+  streak = 0; correct = 0; played = 0;
+  recentCorrectTimes = [];
+
+  const newLevel = loadPrestige() + 1;
+  savePrestige(newLevel);
+  return newLevel;
 }
 
 function loadUnlocked() {
@@ -289,6 +357,88 @@ function applyGuessXp(isCorrect) {
   return tryUnlock(xp);
 }
 
+// ── Statistics ───────────────────────────────────────────────────────────────
+// Computes all-time stats from localStorage history.
+// Clade attribution: each round is counted once per distinct major clade
+// represented among its three organisms (so a round with two mammals and one
+// bird contributes one tally to Mammals and one to Birds).
+function computeStats() {
+  // Most-specific clades first: each leaf walks ancestors until a match is found.
+  const STAT_CLADES = [
+    { id: 'mammalia',       label: 'Mammals' },
+    { id: 'aves',           label: 'Birds' },
+    { id: 'sauropsida',     label: 'Reptiles' },
+    { id: 'amphibia_clade', label: 'Amphibians' },
+    { id: 'actinopterygii', label: 'Ray-finned fish' },
+    { id: 'chondrichthyes', label: 'Sharks & rays' },
+    { id: 'sarcopterygii',  label: 'Lobe-finned fish' },
+    { id: 'arthropoda',     label: 'Arthropods' },
+    { id: 'mollusca',       label: 'Molluscs' },
+    { id: 'animalia',       label: 'Other animals' },
+    { id: 'plants_clade',   label: 'Plants' },
+    { id: 'fungi',          label: 'Fungi' },
+    { id: 'diaphoretickes', label: 'Algae & protists' },
+    { id: 'bacteria',       label: 'Bacteria' },
+    { id: 'archaea',        label: 'Archaea' },
+    { id: 'root',           label: 'Other' },
+  ];
+  const cladeSet   = new Set(STAT_CLADES.map(c => c.id));
+  const cladeLabel = Object.fromEntries(STAT_CLADES.map(c => [c.id, c.label]));
+
+  function leafClade(id) {
+    for (let cur = id; cur !== null; cur = nodeMap[cur]?.parent) {
+      if (cladeSet.has(cur)) return cladeLabel[cur];
+    }
+    return 'Other';
+  }
+
+  const history    = loadHistory();
+  const cladeStats = {};     // label → { played, correct }
+  let hardestCorrect = null;
+  let hardestH = -1;
+  let totalPlayed = 0, totalCorrect = 0;
+
+  for (const [key, rec] of Object.entries(history)) {
+    if (!rec.played) continue;
+    totalPlayed  += rec.played;
+    totalCorrect += rec.correct;
+
+    const [a, b, c] = key.split(',');
+    if (!nodeMap[a] || !nodeMap[b] || !nodeMap[c]) continue; // stale entry
+
+    const h = tripleHardness(a, b, c);
+    if (h < 0) continue; // polytomy
+
+    const ans = oddOneOut(nodeMap[a], nodeMap[b], nodeMap[c]);
+    if (!ans) continue;
+
+    // Attribute this round to the odd-one-out's clade only
+    const label = leafClade(ans.odd);
+    if (!cladeStats[label]) cladeStats[label] = { played: 0, correct: 0 };
+    cladeStats[label].played  += rec.played;
+    cladeStats[label].correct += rec.correct;
+
+    // Track hardest triple answered correctly at least once
+    if (rec.correct > 0 && h > hardestH) {
+      hardestH = h; hardestCorrect = { odd: ans.odd, pairA: ans.pairA, pairB: ans.pairB, h };
+    }
+  }
+
+  const alltime = loadAlltime();
+  return {
+    totalPlayed,
+    totalCorrect,
+    alltimePlayed:  alltime.played  + totalPlayed,
+    alltimeCorrect: alltime.correct + totalCorrect,
+    prestige:       loadPrestige(),
+    longestStreak:  loadLongestStreak(),
+    cladeAccuracy:  Object.entries(cladeStats)
+                      .map(([label, s]) => ({ label, played: s.played, correct: s.correct }))
+                      .sort((a, b) => b.played - a.played),
+    hardestCorrect,
+  };
+}
+
 // ── Hot-streak detection ──────────────────────────────────────────────────────
 let recentCorrectTimes = [];
 
@@ -317,7 +467,8 @@ function recordCorrectAndCheckStreak(now) {
 function buildExplanation(answer, isCorrect) {
   const { odd, pairA, pairB, pairNode, pairAge } = answer;
   const clade = nodeMap[pairNode];
-  const formatClade = node => `<span class="clade-name">${node.label}</span> (<i>${node.sci}</i>)`;
+  const cladeUrl = node => 'https://en.wikipedia.org/wiki/' + (node.wiki || node.sci).replace(/ /g, '_');
+  const formatClade = node => `<a class="clade-name" href="${cladeUrl(node)}" target="_blank" rel="noopener noreferrer">${node.label}</a> (<i>${node.sci}</i>)`;
   const age = pairAge >= 1000
     ? `${(pairAge / 1000).toFixed(1)} billion`
     : `${Math.round(pairAge)} million`;
@@ -349,6 +500,12 @@ if (typeof module !== 'undefined') {
     loadXp, saveXp, loadUnlocked, saveUnlocked, leavesAvailable,
     computeNextUnlockThreshold, tryUnlock, applyGuessXp, setForcedCreature,
     XP_KEY, UNLOCK_KEY,
+    loadLongestStreak, saveLongestStreak, LONGEST_STREAK_KEY,
+    loadPrestige, savePrestige, PRESTIGE_KEY,
+    loadAlltime, saveAlltime, ALLTIME_KEY,
+    PRESTIGE_TITLES, prestigeTitle,
+    allCreaturesUnlocked, doPrestige,
+    computeStats,
     _set(s) {
       if (s.streak             !== undefined) streak             = s.streak;
       if (s.correct            !== undefined) correct            = s.correct;

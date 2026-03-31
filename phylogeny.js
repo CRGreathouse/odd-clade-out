@@ -3,14 +3,20 @@ const phylogeny = {
 
     // ── Domains ───────────────────────────────────────────────────────────────
     { id: "root",             parent: null,               age_mya: 3800,
-      label: "life",                     sci: "LUCA" },
+      label: "life",                     sci: "LUCA",  wiki: "Last_universal_common_ancestor" },
     { id: "bacteria",         parent: "root",             age_mya: 3500,
       label: "bacteria",                 sci: "Bacteria" },
-    { id: "archaea_eukarya",  parent: "root",             age_mya: 3500,
-      label: "archaea and eukaryotes",   sci: "Neomura" },
-    { id: "archaea",          parent: "archaea_eukarya",  age_mya: 2100,
+    // Under the two-domain model, eukaryotes evolved from within Archaea (the Asgard lineage),
+    // so "Archaea" is a grade (paraphyletic).  The monophyletic Archaea clade includes eukaryotes.
+    { id: "archaea",          parent: "root",             age_mya: 3500,
       label: "archaea",                  sci: "Archaea" },
-    { id: "eukarya",          parent: "archaea_eukarya",  age_mya: 2100,
+    // Euryarchaeota: deep-branching archaeal lineage (methanogen's phylum); most distantly related to eukaryotes
+    { id: "euryarchaeota",    parent: "archaea",          age_mya: 3400,
+      label: "euryarchaeotes",           sci: "Euryarchaeota" },
+    // Asgard archaea + eukaryotes: the clade within which eukaryotes are nested
+    { id: "asgard_eukarya",   parent: "archaea",          age_mya: 2600,
+      label: "Asgard archaea and eukaryotes", sci: "Asgardarchaeota + Eukaryota", wiki: "Asgard_archaea" },
+    { id: "eukarya",          parent: "asgard_eukarya",   age_mya: 2100,
       label: "eukaryotes",               sci: "Eukaryota" },
 
     // ── Major eukaryote lineages ───────────────────────────────────────────────
@@ -22,7 +28,7 @@ const phylogeny = {
       label: "diaphoretickes",           sci: "Diaphoretickes" },
     // SAR supergroup: Stramenopiles + Alveolates + Rhizaria
     { id: "sar",              parent: "diaphoretickes",   age_mya: 1100,
-      label: "SAR supergroup",           sci: "SAR" },
+      label: "SAR supergroup",           sci: "SAR",   wiki: "SAR_supergroup" },
     { id: "stramenopila",     parent: "sar",              age_mya: 1000,
       label: "stramenopiles",            sci: "Stramenopila" },
     { id: "alveolata",        parent: "sar",              age_mya: 1000,
@@ -230,10 +236,10 @@ const phylogeny = {
       funFact: "One of the most studied organisms on Earth, yet most strains are harmless gut residents.",
       image: "e-coli", emoji: "🦠" },
     { id: "cyanobacteria", parent: "bacteria",       age_mya: 0, isLeaf: true, tier: 4,
-      commonName: "Cyanobacteria",        sci: "Anabaena sp.",
-      funFact: "Invented photosynthesis ~2.4 billion years ago, producing the oxygen we breathe today.",
+      commonName: "Cyanobacteria",        sci: "Anabaena sp.", wiki: "Cyanobacteria",
+      funFact: "Evolved oxygenic photosynthesis over 2.7 billion years ago, gradually saturating the atmosphere with oxygen — a transformation so radical it is called the Great Oxidation Event.",
       image: "cyanobacteria", emoji: "🌿" },
-    { id: "methanogen",  parent: "archaea",          age_mya: 0, isLeaf: true, tier: 7,
+    { id: "methanogen",  parent: "euryarchaeota",    age_mya: 0, isLeaf: true, tier: 7,
       commonName: "Methanogen",           sci: "Methanocaldococcus jannaschii",
       funFact: "Produces methane as a metabolic byproduct; found in deep-sea hydrothermal vents at 85 °C.",
       image: "methanogen", emoji: "♨️" },
@@ -259,7 +265,7 @@ const phylogeny = {
       image: "bread-mold", emoji: "🍞" },
     { id: "mushroom",    parent: "basidiomycota",    age_mya: 0, isLeaf: true, tier: 5,
       commonName: "Button mushroom",      sci: "Agaricus bisporus",
-      funFact: "The white and crimini mushroom are the same species — just different strains at different maturities.",
+      funFact: "White button, cremini, and portobello are all the same species: white is an albino strain, while cremini and portobello are the same brown strain at young and mature ages.",
       image: "button-mushroom", emoji: "🍄" },
 
     // Plants
@@ -277,7 +283,7 @@ const phylogeny = {
       image: "ginkgo", emoji: "🌿" },
     { id: "water-lily",  parent: "angiosperms",      age_mya: 0, isLeaf: true, tier: 4,
       commonName: "White water lily",     sci: "Nymphaea alba",
-      funFact: "One of the earliest diverging flowering plant lineages — its ancestors split from all other angiosperms ~130 million years ago.",
+      funFact: "Opens its flowers each morning and closes them each evening for just three days; the flowers warm themselves to attract beetles, which spend the night enclosed inside before emerging dusted with pollen.",
       image: "water-lily", emoji: "🌸" },
     { id: "rice",        parent: "monocots",         age_mya: 0, isLeaf: true, tier: 1,
       commonName: "Rice",                 sci: "Oryza sativa",
@@ -331,7 +337,7 @@ const phylogeny = {
       image: "garden-spider", emoji: "🕷️" },
     { id: "horseshoecrab", parent: "chelicerata",    age_mya: 0, isLeaf: true, tier: 4,
       commonName: "Horseshoe crab",       sci: "Limulus polyphemus",
-      funFact: "Despite the name, it is more closely related to spiders than to crabs. Its blue blood saves millions of human lives annually.",
+      funFact: "Has survived largely unchanged for over 300 million years; its blue blood, which clots instantly around bacterial contamination, is used to safety-test every injectable medication.",
       image: "horseshoe-crab", emoji: "🦀" },
     { id: "fruitfly",    parent: "holometabola",     age_mya: 0, isLeaf: true, tier: 1,
       commonName: "Fruit fly",            sci: "Drosophila melanogaster",
@@ -345,7 +351,7 @@ const phylogeny = {
     // Fish
     { id: "shark",       parent: "chondrichthyes",   age_mya: 0, isLeaf: true, tier: 4,
       commonName: "Great white shark",    sci: "Carcharodon carcharias",
-      funFact: "Older than the dinosaurs — sharks have been around for 450 million years with little need to change.",
+      funFact: "Sharks first appeared over 450 million years ago — more than 200 million years before the first dinosaurs — making them one of the oldest surviving vertebrate lineages on Earth.",
       image: "great-white-shark", emoji: "🦈" },
     { id: "zebrafish",   parent: "actinopterygii",   age_mya: 0, isLeaf: true, tier: 5,
       commonName: "Zebrafish",            sci: "Danio rerio",
@@ -353,7 +359,7 @@ const phylogeny = {
       image: "zebrafish", emoji: "🐟" },
     { id: "lungfish",    parent: "rhipidistia",      age_mya: 0, isLeaf: true, tier: 5,
       commonName: "African lungfish",     sci: "Protopterus annectens",
-      funFact: "Breathes air with lungs and can survive droughts buried in mud for years — the closest living fish relative of land vertebrates.",
+      funFact: "Breathes air with lungs and can survive droughts for up to four years encased in a dried mucus cocoon underground, its metabolism slowing to near zero.",
       image: "lungfish", emoji: "🐟" },
     { id: "coelacanth",  parent: "sarcopterygii",    age_mya: 0, isLeaf: true, tier: 8,
       commonName: "Coelacanth",           sci: "Latimeria chalumnae",
@@ -377,7 +383,7 @@ const phylogeny = {
       image: "komodo-dragon", emoji: "🦎" },
     { id: "tuatara",     parent: "lepidosauria",     age_mya: 0, isLeaf: true, tier: 4,
       commonName: "Tuatara",              sci: "Sphenodon punctatus",
-      funFact: "The sole survivor of an order that diverged from lizards ~240 million years ago; has a photosensitive 'third eye' on top of its head.",
+      funFact: "Has a light-sensing 'third eye' on top of its skull and remains active at temperatures as low as 7 °C — colder than any other reptile; individuals have been known to live past 100 years.",
       image: "tuatara", emoji: "🦎" },
     { id: "turtle",      parent: "archelosauria",    age_mya: 0, isLeaf: true, tier: 1,
       commonName: "Green sea turtle",     sci: "Chelonia mydas",
@@ -385,7 +391,7 @@ const phylogeny = {
       image: "green-sea-turtle", emoji: "🐢" },
     { id: "crocodile",   parent: "crocodilia",       age_mya: 0, isLeaf: true, tier: 4,
       commonName: "Nile crocodile",       sci: "Crocodylus niloticus",
-      funFact: "Africa's largest freshwater predator; its lineage diverged from birds over 240 million years ago yet it has barely changed.",
+      funFact: "Africa's largest freshwater predator; it can bite with enough force to crush bone, yet its jaw-opening muscles are so weak its mouth can be held shut by hand.",
       image: "Nile-crocodile", emoji: "🐊" },
 
     // Extinct dinosaurs & pterosaurs
@@ -395,11 +401,11 @@ const phylogeny = {
       image: "triceratops", emoji: "🦕" },
     { id: "tyrannosaur", parent: "saurischia",       age_mya: 0, isLeaf: true, tier: 8,
       commonName: "Tyrannosaurus rex",    sci: "Tyrannosaurus rex",
-      funFact: "Had the strongest bite force of any known land animal (~3,600 kg) and was more closely related to modern birds than to Triceratops.",
+      funFact: "Had the strongest bite force of any known land animal (~3,600 kg) and binocular vision as wide as a modern hawk's — more consistent with an active predator than a scavenger.",
       image: "tyrannosaur", emoji: "🦖" },
     { id: "pterosaur",   parent: "ornithodira",      age_mya: 0, isLeaf: true, tier: 8,
       commonName: "Pteranodon",           sci: "Pteranodon longiceps",
-      funFact: "Not a dinosaur, despite living alongside them — pterosaurs were the first vertebrates to evolve powered flight, ~80 million years before the earliest birds.",
+      funFact: "The first vertebrates to evolve powered flight, roughly 80 million years before birds; Pteranodon's wingspan reached up to 6 metres, yet its hollow bones kept it light enough to soar for days.",
       image: "pterosaur", emoji: "🦅" },
 
     // Birds
@@ -413,11 +419,11 @@ const phylogeny = {
       image: "bald-eagle", emoji: "🦅" },
     { id: "falcon",      parent: "australaves",      age_mya: 0, isLeaf: true, tier: 4,
       commonName: "Peregrine falcon",     sci: "Falco peregrinus",
-      funFact: "The fastest animal on Earth, reaching over 380 km/h in a dive — and more closely related to parrots than to eagles.",
+      funFact: "The fastest animal on Earth, reaching over 380 km/h in a dive; once nearly extinct from DDT-induced eggshell thinning, it is now one of conservation's greatest comeback stories.",
       image: "peregrine-falcon", emoji: "🦅" },
     { id: "parakeet",    parent: "australaves",      age_mya: 0, isLeaf: true, tier: 2,
       commonName: "Common parakeet",      sci: "Melopsittacus undulatus",
-      funFact: "Also called the budgerigar; one of the most popular pet birds in the world and capable of learning hundreds of words.",
+      funFact: "Also called the budgerigar; a budgerigar named Puck holds the Guinness record for bird vocabulary, with 1,728 words.",
       image: "parakeet", emoji: "🦜" },
 
     // Mammals
@@ -439,7 +445,7 @@ const phylogeny = {
       image: "blue-whale", emoji: "🐋" },
     { id: "hippo",       parent: "whippomorpha",     age_mya: 0, isLeaf: true, tier: 3,
       commonName: "Hippopotamus",         sci: "Hippopotamus amphibius",
-      funFact: "The hippo's closest living relative is the whale — they share a common ancestor from ~55 million years ago.",
+      funFact: "Secretes a red-orange fluid from its skin that acts as a natural sunscreen and antibiotic — long mistaken by observers for sweating blood.",
       image: "hippo", emoji: "🦛" },
     { id: "giraffe",     parent: "ruminantia",       age_mya: 0, isLeaf: true, tier: 1,
       commonName: "Giraffe",              sci: "Giraffa camelopardalis",
@@ -471,11 +477,11 @@ const phylogeny = {
       image: "dog", emoji: "🐶" },
     { id: "red-fox",     parent: "canidae",          age_mya: 0, isLeaf: true, tier: 3,
       commonName: "Red fox",              sci: "Vulpes vulpes",
-      funFact: "The most widely distributed wild carnivore on Earth, thriving from Arctic tundra to city suburbs on six continents.",
+      funFact: "The most widely distributed wild carnivore on Earth, found from Arctic tundra to city suburbs across Europe, Asia, North America, and — through introduction — Australia.",
       image: "red-fox", emoji: "🦊" },
     { id: "panda",       parent: "arctoidea",        age_mya: 0, isLeaf: true, tier: 3,
       commonName: "Giant panda",          sci: "Ailuropoda melanoleuca",
-      funFact: "Almost exclusively bamboo; its 'thumb' is an enlarged wrist bone.",
+      funFact: "Eats almost exclusively bamboo, yet is biologically classified as a carnivore; its apparent 'thumb' is an enlarged wrist bone, not a true digit.",
       image: "giant-panda", emoji: "🐼" },
     { id: "seal",        parent: "arctoidea",        age_mya: 0, isLeaf: true, tier: 6,
       commonName: "Harbor seal",         sci: "Phoca vitulina",
@@ -490,8 +496,8 @@ const phylogeny = {
       funFact: "The largest land animal alive; uses infrasound calls below human hearing to communicate over kilometres.",
       image: "African-elephant", emoji: "🐘" },
     { id: "elephant-shrew", parent: "afrotheria",    age_mya: 0, isLeaf: true, tier: 6,
-      commonName: "Elephant shrew",       sci: "Elephantulus sp.",
-      funFact: "Despite looking like a tiny shrew, its closest relatives are elephants and aardvarks — not true shrews.",
+      commonName: "Elephant shrew",       sci: "Elephantulus sp.", wiki: "Elephant shrew",
+      funFact: "Despite weighing as little as 50 g, can sprint at nearly 30 km/h; it maintains a network of private escape trails through leaf litter, which it patrols and sweeps clear of debris each day.",
       image: "elephant-shrew", emoji: "🐭" },
     { id: "human",       parent: "hominidae",        age_mya: 0, isLeaf: true, tier: 3,
       commonName: "Human",                sci: "Homo sapiens",
@@ -520,5 +526,5 @@ const phylogeny = {
   ]
 };
 
-// Allow loading in Node.js (for validate.js and tests/)
+// Allow loading in Node.js (for checks/ and tests/)
 if (typeof module !== 'undefined') module.exports = phylogeny;
