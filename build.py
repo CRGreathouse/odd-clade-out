@@ -26,7 +26,7 @@ def replace_image_ref(match):
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-html     = open('cladogame.html').read()
+html     = open('index.html').read()
 css      = open('cladogame.css').read()
 phy_js   = open('phylogeny.js').read()
 logic_js = open('cladogame-logic.js').read()
@@ -67,5 +67,5 @@ dest = sys.argv[1] if len(sys.argv) > 1 else 'cladogame-bundle.html'
 with open(dest, 'w') as f:
     f.write(out)
 
-size_kb = os.path.getsize(dest) // 1024
-print(f'Built {dest} ({size_kb} KB)')
+size_mb = os.path.getsize(dest) / 1048576
+print(f'Built {dest} ({size_mb:.1f} MB)')

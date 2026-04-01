@@ -303,12 +303,12 @@ header {
 }
 .result-panel.visible { opacity: 1; transform: translateY(0); }
 .result-panel strong { font-weight: 500; color: var(--text-primary); }
-.result-panel .clade-name { font-style: italic; color: var(--gold); text-decoration: none; }
+.result-panel .clade-name { color: var(--gold); text-decoration: none; }
 .result-panel .clade-name:hover { text-decoration: underline; }
+.result-panel .organism-link { color: inherit; text-decoration: underline;
+  text-decoration-color: var(--text-dim); text-underline-offset: 2px; }
+.result-panel .organism-link:hover { color: var(--gold); text-decoration-color: var(--gold); }
 .cladogram { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
-.learn-more { margin-top: 0.65rem; font-size: 0.75rem; color: var(--text-dim); }
-.learn-more a { color: var(--gold); text-decoration: none; }
-.learn-more a:hover { text-decoration: underline; }
 
 /* ── Next button ── */
 .next-btn {
@@ -476,6 +476,37 @@ header {
   color: var(--text-dim);
   margin-bottom: 12px;
 }
+
+/* Round history log */
+.stats-history-log {
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.history-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+.history-marker {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  width: 14px;
+  text-align: center;
+}
+.history-correct .history-marker { color: #5a9e6f; }
+.history-wrong   .history-marker { color: #b05050; }
+.history-body { color: var(--text-secondary); }
+.history-pair { color: var(--text-primary); font-weight: 500; }
+.history-sep  { color: var(--text-dim); }
+.history-odd  { color: var(--gold); }
+.history-odd-label { font-size: 0.72rem; color: var(--text-dim); }
+.history-guess     { font-size: 0.72rem; color: var(--text-dim); }
 
 /* Clade accuracy rows */
 .clade-stat-row {

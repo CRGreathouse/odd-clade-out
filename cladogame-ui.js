@@ -13,8 +13,7 @@ function flashEl(el, animName) {
 
 function updateStats() {
   $('streak-display').textContent   = streak;
-  $('correct-display').textContent  = correct;
-  $('played-display').textContent   = played;
+  $('correct-display').textContent  = correct + '/' + played;
   $('species-display').textContent  = leavesAvailable().length;
 }
 
@@ -132,6 +131,7 @@ function handleGuess(guessedId) {
   const now = Date.now();
   played++;
   saveResult(currentAnswer.odd, currentAnswer.pairA, currentAnswer.pairB, isCorrect);
+  saveRoundLog(currentAnswer.odd, currentAnswer.pairA, currentAnswer.pairB, guessedId, isCorrect);
   updateCreatureScores(currentAnswer.odd, currentAnswer.pairA, currentAnswer.pairB, guessedId);
 
   if (isCorrect) {
@@ -162,13 +162,6 @@ function handleGuess(guessedId) {
   resultPanel.innerHTML = buildExplanation(currentAnswer, isCorrect);
   resultPanel.insertAdjacentHTML('beforeend',
     '<div class="cladogram">' + buildCladogram(currentAnswer) + '</div>');
-
-  const learnOrgs = [currentAnswer.odd, currentAnswer.pairA, currentAnswer.pairB]
-    .map(id => nodeMap[id]);
-  resultPanel.insertAdjacentHTML('beforeend',
-    '<p class="learn-more">Learn more: ' +
-    learnOrgs.map(o => getLink(o)).join(' · ') +
-    '</p>');
 
   resultPanel.classList.add('visible');
   setTimeout(() => {
@@ -304,6 +297,34 @@ function renderStats() {
         `<span class="clade-stat-pct">${pct}%</span>` +
         `<span class="clade-stat-n">${c.played}</span>`;
       cladeEl.appendChild(row);
+    }
+
+    // Round history log
+    const log = loadRoundLog();
+    const histEl = $('stats-history');
+    histEl.innerHTML = '';
+    for (const entry of log) {
+      const { odd, pairA, pairB, guessedId, wasCorrect } = entry;
+      const oddNode   = nodeMap[odd];
+      const pairANode = nodeMap[pairA];
+      const pairBNode = nodeMap[pairB];
+      if (!oddNode || !pairANode || !pairBNode) continue; // guard against stale IDs
+      const row = document.createElement('div');
+      row.className = `history-row ${wasCorrect ? 'history-correct' : 'history-wrong'}`;
+      const marker = wasCorrect ? '✓' : '✗';
+      let guess = '';
+      if (!wasCorrect && guessedId && nodeMap[guessedId]) {
+        guess = ` <span class="history-guess">(chose ${nodeMap[guessedId].commonName})</span>`;
+      }
+      row.innerHTML =
+        `<span class="history-marker">${marker}</span>` +
+        `<span class="history-body">` +
+          `<span class="history-pair">${pairANode.commonName} &amp; ${pairBNode.commonName}</span>` +
+          ` <span class="history-sep">·</span> ` +
+          `<span class="history-odd">${oddNode.commonName}</span>` +
+          ` <span class="history-odd-label">odd one out</span>${guess}` +
+        `</span>`;
+      histEl.appendChild(row);
     }
 
     // Hardest correct triple

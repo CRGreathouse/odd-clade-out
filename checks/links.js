@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// Checks that every Wikipedia URL derived from phylogeny.js actually resolves.
+// Checks that every link URL derived from phylogeny.js actually resolves.
 // Makes one HEAD request per node, spaced DELAY_MS apart, to avoid hammering
 // the server.
 //
@@ -24,10 +24,11 @@ const nodes    = phylogeny.nodes;
 const DELAY_MS = 5000;
 const UA       = 'odd-clade-out-linkcheck/1.0 (personal educational game; non-automated spot check)';
 
-// Build the Wikipedia URL for a node using the same logic as the game.
-// Leaves use sci; internal nodes prefer the wiki override, then sci.
-function nodeWikiUrl(node) {
-  const key  = node.wiki || node.sci;
+// Derive the URL for a node using the same priority as getLink() in the game:
+// node.link (direct URL) → node.wiki (Wikipedia slug) → node.sci (Wikipedia slug).
+function nodeUrl(node) {
+  if (node.link) return node.link;
+  const key = node.wiki || node.sci;
   return 'https://en.wikipedia.org/wiki/' + key.replace(/ /g, '_');
 }
 
@@ -47,19 +48,35 @@ function headRequest(url) {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function main() {
-  const dryRun = process.argv.includes('--dry-run');
+  const args   = process.argv.slice(2);
+  const dryRun = args.includes('--dry-run');
+  const ids    = args.filter(a => a !== '--dry-run');
+
+  let subset;
+  if (ids.length > 0) {
+    const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
+    const unknown  = ids.filter(id => !nodeById[id]);
+    if (unknown.length > 0) {
+      console.error(`ERROR: unknown node id(s): ${unknown.join(', ')}`);
+      process.exit(1);
+    }
+    subset = ids.map(id => nodeById[id]);
+  } else {
+    subset = nodes;
+  }
+
   let errors = 0, warnings = 0;
-  const total = nodes.length;
+  const total = subset.length;
 
   if (dryRun) {
-    console.log(`Dry run — ${total} nodes would be checked:\n`);
+    console.log(`Dry run — ${total} node(s) would be checked:\n`);
   } else {
-    console.log(`Checking ${total} nodes (${DELAY_MS / 1000}s between requests)…\n`);
+    console.log(`Checking ${total} node(s) (${DELAY_MS / 1000}s between requests)…\n`);
   }
 
   for (let i = 0; i < total; i++) {
-    const node = nodes[i];
-    const url  = nodeWikiUrl(node);
+    const node = subset[i];
+    const url  = nodeUrl(node);
     const name = node.isLeaf ? node.commonName : node.label;
     const tag  = node.isLeaf ? 'leaf    ' : 'internal';
     const idx  = `[${String(i + 1).padStart(3)}/${total}]`;

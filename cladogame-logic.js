@@ -183,6 +183,8 @@ const UNLOCK_KEY         = 'cladogame_v1_unlocked';
 const LONGEST_STREAK_KEY = 'cladogame_v1_longest_streak';
 const PRESTIGE_KEY       = 'cladogame_v1_prestige';
 const ALLTIME_KEY        = 'cladogame_v1_alltime';
+const ROUND_LOG_KEY      = 'cladogame_v1_round_log';
+const ROUND_LOG_MAX      = 50;
 
 function tripleKey(a, b, c) { return [a, b, c].sort().join(','); }
 
@@ -197,6 +199,19 @@ function saveToStorage(key, data) {
 
 function loadHistory()        { return loadFromStorage(HISTORY_KEY); }
 function loadCreatureScores() { return loadFromStorage(CREATURE_KEY); }
+
+// Sequential round log — stores up to ROUND_LOG_MAX recent rounds in order,
+// newest first. Each entry: { odd, pairA, pairB, guessedId, wasCorrect }.
+function loadRoundLog() {
+  try { return JSON.parse(localStorage.getItem(ROUND_LOG_KEY) || '[]'); }
+  catch { return []; }
+}
+function saveRoundLog(odd, pairA, pairB, guessedId, wasCorrect) {
+  const log = loadRoundLog();
+  log.unshift({ odd, pairA, pairB, guessedId, wasCorrect });
+  if (log.length > ROUND_LOG_MAX) log.length = ROUND_LOG_MAX;
+  try { localStorage.setItem(ROUND_LOG_KEY, JSON.stringify(log)); } catch {}
+}
 
 function saveResult(a, b, c, wasCorrect) {
   const history = loadHistory();
@@ -291,6 +306,7 @@ function doPrestige() {
   // Clear per-run data
   saveToStorage(HISTORY_KEY,  {});
   saveToStorage(CREATURE_KEY, {});
+  try { localStorage.removeItem(ROUND_LOG_KEY); } catch {}
   saveXp(0);
   saveUnlocked([]);
 
@@ -476,19 +492,56 @@ function getLink(node, cssClass) {
   return `<a${cls} href="${url}" target="_blank" rel="noreferrer">${name}</a>`;
 }
 
+// Link for an internal clade node: common name, gold styling, trait as tooltip.
+function cladeLink(node) {
+  const url = node.link
+    ? node.link
+    : 'https://en.wikipedia.org/wiki/' + (node.wiki || node.sci).replace(/ /g, '_');
+  const name = node.commonName || node.label;
+  const title = node.trait ? ` title="${node.trait}"` : '';
+  return `<a class="clade-name"${title} href="${url}" target="_blank" rel="noreferrer">${name}</a>`;
+}
+
 // ── Result explanation (HTML string, no DOM writes) ───────────────────────────
 function buildExplanation(answer, isCorrect) {
   const { odd, pairA, pairB, pairNode, pairAge } = answer;
   const clade = nodeMap[pairNode];
-  const formatClade = node => `${getLink(node, 'clade-name')} (<i>${node.sci}</i>)`;
+  const formatClade = node => `${cladeLink(node)} (<i>${node.sci}</i>)`;
+  const linkOrg     = id   => `<strong>${getLink(nodeMap[id], 'organism-link')}</strong>`;
   const age = pairAge >= 1000
     ? `${(pairAge / 1000).toFixed(1)} billion`
     : `${Math.round(pairAge)} million`;
-  const intro = isCorrect ? 'Correct!' : `The odd one out was <strong>${nodeMap[odd].commonName}</strong>.`;
+  const intro = isCorrect ? 'Correct!' : `The odd one out was ${linkOrg(odd)}.`;
   const traitOf = node => node.trait ? `, ${node.trait}` : '';
-  let explanation = `${intro} <strong>${nodeMap[pairA].commonName}</strong> and <strong>${nodeMap[pairB].commonName}</strong> `
-    + `are both ${formatClade(clade)}${traitOf(clade)}, `
-    + `having diverged ~${age} years ago — making <strong>${nodeMap[odd].commonName}</strong> the more distant relative.`;
+
+  // Collect nodes strictly between pairNode and the triple LCA (exclusive of both).
+  // These are broader clades that pairA and pairB also share, giving useful context.
+  const tripleId = lca(pairNode, odd);
+  const intermediates = [];
+  for (let cur = nodeMap[pairNode].parent; cur && cur !== tripleId; cur = nodeMap[cur].parent) {
+    intermediates.push(nodeMap[cur]);
+  }
+  // Show up to three (closest to the pair LCA = most specific = most informative).
+  const shown = intermediates.slice(0, 3);
+
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const joinLinks = nodes => {
+    const links = nodes.map(cladeLink);
+    if (links.length === 1) return links[0];
+    if (links.length === 2) return `${links[0]} and ${links[1]}`;
+    return `${links.slice(0, -1).join(', ')}, and ${links[links.length - 1]}`;
+  };
+
+  let explanation;
+  if (shown.length > 0) {
+    explanation = `${intro} ${linkOrg(pairA)} and ${linkOrg(pairB)} `
+      + `are both ${formatClade(clade)}${traitOf(clade)}, hence also ${joinLinks(shown)}. `
+      + `${cap(clade.label)} diverged ~${age} years ago, making ${linkOrg(odd)} the more distant relative.`;
+  } else {
+    explanation = `${intro} ${linkOrg(pairA)} and ${linkOrg(pairB)} `
+      + `are both ${formatClade(clade)}${traitOf(clade)}, `
+      + `having diverged ~${age} years ago — making ${linkOrg(odd)} the more distant relative.`;
+  }
 
   const excId = exclusiveClade(odd, pairNode);
   if (excId === odd) {
@@ -496,7 +549,7 @@ function buildExplanation(answer, isCorrect) {
     explanation += ` All three belong to ${formatClade(parent)}${traitOf(parent)}.`;
   } else {
     const excNode = nodeMap[excId];
-    explanation += ` <strong>${nodeMap[odd].commonName}</strong> belongs to ${formatClade(excNode)}${traitOf(excNode)}.`;
+    explanation += ` ${linkOrg(odd)} belongs to ${formatClade(excNode)}${traitOf(excNode)}.`;
   }
 
   return explanation;
@@ -509,6 +562,7 @@ if (typeof module !== 'undefined') {
     targetHardness, buildExplanation, getLink,
     recordCorrectAndCheckStreak,
     tripleKey, loadHistory, saveResult, loadCreatureScores, updateCreatureScores,
+    loadRoundLog, saveRoundLog,
     resolveImage, pickTriple,
     STREAK_THRESHOLD, STREAK_WINDOW_MS,
     HISTORY_KEY,
