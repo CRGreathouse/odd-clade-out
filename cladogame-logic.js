@@ -246,26 +246,19 @@ function updateCreatureScores(oddId, pairAId, pairBId, guessedId) {
 }
 
 // ── XP and creature unlocks ───────────────────────────────────────────────────
-function loadXp() {
-  return Math.max(0, parseInt(localStorage.getItem(XP_KEY) || '0', 10) || 0);
+function loadIntSetting(key) {
+  return Math.max(0, parseInt(localStorage.getItem(key) || '0', 10) || 0);
 }
-function saveXp(n) {
-  try { localStorage.setItem(XP_KEY, String(Math.max(0, n))); } catch {}
-}
-
-function loadLongestStreak() {
-  return Math.max(0, parseInt(localStorage.getItem(LONGEST_STREAK_KEY) || '0', 10) || 0);
-}
-function saveLongestStreak(n) {
-  try { localStorage.setItem(LONGEST_STREAK_KEY, String(n)); } catch {}
+function saveIntSetting(key, n) {
+  try { localStorage.setItem(key, String(n)); } catch {}
 }
 
-function loadPrestige() {
-  return Math.max(0, parseInt(localStorage.getItem(PRESTIGE_KEY) || '0', 10) || 0);
-}
-function savePrestige(n) {
-  try { localStorage.setItem(PRESTIGE_KEY, String(n)); } catch {}
-}
+function loadXp()            { return loadIntSetting(XP_KEY); }
+function saveXp(n)           { saveIntSetting(XP_KEY, Math.max(0, n)); }
+function loadLongestStreak() { return loadIntSetting(LONGEST_STREAK_KEY); }
+function saveLongestStreak(n){ saveIntSetting(LONGEST_STREAK_KEY, n); }
+function loadPrestige()      { return loadIntSetting(PRESTIGE_KEY); }
+function savePrestige(n)     { saveIntSetting(PRESTIGE_KEY, n); }
 
 function loadAlltime() {
   try {
@@ -284,6 +277,9 @@ const PRESTIGE_TITLES = [
 function prestigeTitle(level) {
   if (level === 0) return null;
   return PRESTIGE_TITLES[Math.min(level - 1, PRESTIGE_TITLES.length - 1)];
+}
+function prestigeRunLabel(level) {
+  return `${prestigeTitle(level)} · Run ${level + 1}`;
 }
 
 // True when every creature in the tree (all tiers) is available to the player.
@@ -483,23 +479,23 @@ function recordCorrectAndCheckStreak(now) {
   return false;
 }
 
-function getLink(node, cssClass) {
-  const url = node.link
+function nodeUrl(node) {
+  return node.link
     ? node.link
     : 'https://en.wikipedia.org/wiki/' + (node.wiki || node.sci).replace(/ /g, '_');
+}
+
+function getLink(node, cssClass) {
   const name = node.commonName || node.label;
   const cls = cssClass ? ` class="${cssClass}"` : '';
-  return `<a${cls} href="${url}" target="_blank" rel="noreferrer">${name}</a>`;
+  return `<a${cls} href="${nodeUrl(node)}" target="_blank" rel="noreferrer">${name}</a>`;
 }
 
 // Link for an internal clade node: common name, gold styling, trait as tooltip.
 function cladeLink(node) {
-  const url = node.link
-    ? node.link
-    : 'https://en.wikipedia.org/wiki/' + (node.wiki || node.sci).replace(/ /g, '_');
   const name = node.commonName || node.label;
   const title = node.trait ? ` title="${node.trait}"` : '';
-  return `<a class="clade-name"${title} href="${url}" target="_blank" rel="noreferrer">${name}</a>`;
+  return `<a class="clade-name"${title} href="${nodeUrl(node)}" target="_blank" rel="noreferrer">${name}</a>`;
 }
 
 // ── Result explanation (HTML string, no DOM writes) ───────────────────────────
@@ -572,7 +568,7 @@ if (typeof module !== 'undefined') {
     loadLongestStreak, saveLongestStreak, LONGEST_STREAK_KEY,
     loadPrestige, savePrestige, PRESTIGE_KEY,
     loadAlltime, saveAlltime, ALLTIME_KEY,
-    PRESTIGE_TITLES, prestigeTitle,
+    PRESTIGE_TITLES, prestigeTitle, prestigeRunLabel,
     allCreaturesUnlocked, doPrestige,
     computeStats,
     _set(s) {

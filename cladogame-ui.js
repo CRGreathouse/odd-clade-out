@@ -43,25 +43,44 @@ function buildCardHTML(org) {
 // ══════════════════════════════════════════════════════════════════════════════
 // Animations
 // ══════════════════════════════════════════════════════════════════════════════
+function spawnParticles(container, n, {
+  dxRange = 200, dyMin = 60, dyRange = 140,
+  hueMin = 30, hueRange = 60,
+  delayMax = 0.4, durMin = 0.7, durRange = 0.5,
+} = {}) {
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    p.style.cssText =
+      `left:${Math.random()*100}%;top:${Math.random()*100}%;` +
+      `--dx:${(Math.random()-0.5)*dxRange}px;--dy:${-(dyMin+Math.random()*dyRange)}px;` +
+      `--hue:${hueMin+Math.random()*hueRange};` +
+      `animation-delay:${Math.random()*delayMax}s;animation-duration:${durMin+Math.random()*durRange}s;`;
+    container.appendChild(p);
+  }
+}
+
+function clearParticles(container) {
+  container.querySelectorAll('.particle').forEach(p => p.remove());
+}
+
+// Show/hide a prestige-level label element.
+function setPrestigeEl(el, level) {
+  if (level > 0) {
+    el.textContent   = prestigeRunLabel(level);
+    el.style.display = '';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
 function triggerHotStreak() {
   const overlay = $('streak-overlay');
   overlay.classList.add('active');
-  for (let i = 0; i < 28; i++) {
-    const p = document.createElement('div');
-    p.className = 'particle';
-    p.style.cssText = `
-      left: ${Math.random() * 100}%;
-      top: ${Math.random() * 100}%;
-      --dx: ${(Math.random() - 0.5) * 200}px;
-      --dy: ${-(60 + Math.random() * 140)}px;
-      --hue: ${Math.random() * 60 + 30};
-      animation-delay: ${Math.random() * 0.4}s;
-      animation-duration: ${0.7 + Math.random() * 0.5}s;`;
-    overlay.appendChild(p);
-  }
+  spawnParticles(overlay, 28);
   setTimeout(() => {
     overlay.classList.remove('active');
-    overlay.querySelectorAll('.particle').forEach(p => p.remove());
+    clearParticles(overlay);
   }, 1800);
 }
 
@@ -80,15 +99,11 @@ function triggerNewCreature(creature) {
   $('newcreature-sci').textContent    = creature.sci;
   $('newcreature-fact').textContent   = creature.funFact;
 
-  for (let i = 0; i < 30; i++) {
-    const p = document.createElement('div');
-    p.className = 'particle';
-    p.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;` +
-      `--dx:${(Math.random()-0.5)*220}px;--dy:${-(80+Math.random()*160)}px;` +
-      `--hue:${Math.random()*180+200};` +
-      `animation-delay:${Math.random()*0.35}s;animation-duration:${0.8+Math.random()*0.6}s;`;
-    overlay.appendChild(p);
-  }
+  spawnParticles(overlay, 30, {
+    dxRange: 220, dyMin: 80, dyRange: 160,
+    hueMin: 200, hueRange: 180,
+    delayMax: 0.35, durMin: 0.8, durRange: 0.6,
+  });
   overlay.classList.add('active');
 }
 
@@ -268,13 +283,7 @@ function renderStats() {
   $('stats-streak-val').textContent   = s.longestStreak  || '—';
 
   // Prestige level in header
-  const plEl = $('stats-prestige-level');
-  if (s.prestige > 0) {
-    plEl.textContent   = `${prestigeTitle(s.prestige)} · Run ${s.prestige + 1}`;
-    plEl.style.display = '';
-  } else {
-    plEl.style.display = 'none';
-  }
+  setPrestigeEl($('stats-prestige-level'), s.prestige);
 
   // Clade / hardest sections are per-run (reset on prestige)
   if (s.totalPlayed === 0) {
@@ -373,14 +382,7 @@ function confirmPrestige() {
 }
 
 function updatePrestigeBadge() {
-  const p  = loadPrestige();
-  const el = $('prestige-badge');
-  if (p > 0) {
-    el.textContent   = `${prestigeTitle(p)} · Run ${p + 1}`;
-    el.style.display = '';
-  } else {
-    el.style.display = 'none';
-  }
+  setPrestigeEl($('prestige-badge'), loadPrestige());
 }
 
 function handleNextClick() {
@@ -422,7 +424,7 @@ function boot() {
   $('newcreature-overlay').addEventListener('click', () => {
     const overlay = $('newcreature-overlay');
     overlay.classList.remove('active');
-    overlay.querySelectorAll('.particle').forEach(p => p.remove());
+    clearParticles(overlay);
     if (lastUnlockedCreature) {
       setForcedCreature(lastUnlockedCreature.id);
       lastUnlockedCreature = null;

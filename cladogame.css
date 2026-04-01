@@ -505,7 +505,7 @@ header {
 .history-pair { color: var(--text-primary); font-weight: 500; }
 .history-sep  { color: var(--text-dim); }
 .history-odd  { color: var(--gold); }
-.history-odd-label { font-size: 0.72rem; color: var(--text-dim); }
+.history-odd-label,
 .history-guess     { font-size: 0.72rem; color: var(--text-dim); }
 
 /* Clade accuracy rows */
@@ -553,16 +553,20 @@ header {
   line-height: 1.55;
   margin-bottom: 12px;
 }
+.stats-prestige-btn,
+.stats-prestige-confirm-go,
+.stats-prestige-confirm-cancel {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  border-radius: 100px;
+  cursor: pointer;
+}
 .stats-prestige-btn {
   background: transparent;
   border: 1px solid var(--gold-border);
   color: var(--gold);
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
   padding: 7px 18px;
-  border-radius: 100px;
-  cursor: pointer;
   transition: background 0.2s;
 }
 .stats-prestige-btn:hover { background: var(--gold-bg); }
@@ -572,12 +576,7 @@ header {
   background: var(--gold-bg);
   border: 1px solid var(--gold-border);
   color: var(--gold);
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
   padding: 7px 16px;
-  border-radius: 100px;
-  cursor: pointer;
   transition: background 0.2s;
 }
 .stats-prestige-confirm-go:hover { background: rgba(201,168,76,0.25); }
@@ -585,12 +584,7 @@ header {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--text-secondary);
-  font-family: var(--font-body);
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
   padding: 7px 16px;
-  border-radius: 100px;
-  cursor: pointer;
   transition: color 0.2s, border-color 0.2s;
 }
 .stats-prestige-confirm-cancel:hover { color: var(--text-primary); border-color: #404a66; }
